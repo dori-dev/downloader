@@ -109,6 +109,45 @@ async def download_part(
     await queue.put(-1)
 
 
+async def show_progress(
+    queue: asyncio.Queue[int],
+    total_size: int,
+    total_parts: int,
+) -> None:
+    """
+    Show the progress of downloading the file.
+    """
+    downloaded = 0
+    download_per_second = 0
+    finished = 0
+    while finished != total_parts:
+        download_per_second = 0
+        while not queue.empty():
+            chunk_size = await queue.get()
+            if chunk_size == -1:
+                finished += 1
+            download_per_second += chunk_size
+        downloaded += download_per_second
+        if download_per_second > 0:
+            complete_count = ceil(downloaded / total_size * 50)
+            remaining_seconds = (
+                total_size / downloaded
+            ) // download_per_second
+            # display
+            percent = ceil(downloaded / total_size * 100)
+            completed = "=" * complete_count
+            remaining = "-" * (50 - complete_count)
+            remaining_time = datetime.timedelta(seconds=remaining_seconds)
+            display = (
+                f"{format_size(downloaded):10s} ({percent}%) "
+                f"{completed}{remaining} "
+                f"{format_size(download_per_second)}/s {remaining_time}"
+            )
+            end = "\r" if finished != total_parts else "\n"
+            print(display, end=end)
+        await asyncio.sleep(1)
+
+
 async def delete_file(file_name: str, temp_dir: str, id: int) -> None:
     """
     Delete a file asynchronously.
