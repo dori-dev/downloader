@@ -4,7 +4,7 @@ from math import ceil
 import asyncio
 import aiohttp
 import aiofiles
-from aiofiles.os import remove as os_remove
+from aiofiles.os import remove as async_remove
 
 
 UNITS = ["", "K", "M", "G", "T", "P", "E", "Z"]
@@ -107,3 +107,12 @@ async def download_part(
                     await file.write(chunk)
                     await queue.put(len(chunk))
     await queue.put(-1)
+
+
+async def delete_file(file_name: str, temp_dir: str, id: int) -> None:
+    """
+    Delete a file asynchronously.
+    """
+    file_path = os.path.join(temp_dir, f"{file_name}.part{id}")
+    if os.path.exists(file_path):
+        await async_remove(file_path)
