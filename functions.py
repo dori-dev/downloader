@@ -134,7 +134,7 @@ async def show_progress(
         if download_per_second > 0:
             complete_count = ceil(downloaded / total_size * 50)
             remaining_seconds = (
-                total_size / downloaded
+                total_size - downloaded
             ) // download_per_second
             # display
             percent = ceil(downloaded / total_size * 100)
