@@ -96,7 +96,10 @@ async def download_part(
         "Range": f"bytes={from_byte}-{to_byte}"
     }
     timeout = aiohttp.ClientTimeout(connect=8 * 60)
-    async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
+    async with aiohttp.ClientSession(
+        headers=headers,
+        timeout=timeout,
+    ) as session:
         async with session.get(url) as response:
             file_path = os.path.join(temp_dir, f"{file_name}.part{id}")
             async with aiofiles.open(file_path, 'wb') as file:
@@ -146,6 +149,28 @@ async def show_progress(
             end = "\r" if finished != total_parts else "\n"
             print(display, end=end)
         await asyncio.sleep(1)
+
+
+async def merge_file_parts(
+    file_name: str,
+    temp_dir: str,
+    total_parts: int,
+) -> bool:
+    """
+    Merge the given file parts into a single file.
+    """
+    ids = list(range(1, total_parts + 1))
+    async with aiofiles.open(file_name, "wb") as single_file:
+        for id in ids:
+            file_path = os.path.join(temp_dir, f"{file_name}.part{id}")
+            async with aiofiles.open(file_path, "rb") as file:
+                while True:
+                    chunk = await file.read(10 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    await single_file.write(chunk)
+            await delete_file(file_name, temp_dir, id)
+    return True
 
 
 async def delete_file(file_name: str, temp_dir: str, id: int) -> None:
