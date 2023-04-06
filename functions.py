@@ -1,5 +1,10 @@
+import os
+import datetime
 from math import ceil
+import asyncio
 import aiohttp
+import aiofiles
+from aiofiles.os import remove as os_remove
 
 
 UNITS = ["", "K", "M", "G", "T", "P", "E", "Z"]
@@ -73,3 +78,32 @@ def verify_splitted_chunks(parts: list, file_size: int) -> bool:
         )
     )
     assert calc_size == file_size, "File size mismatch!"
+
+
+async def download_part(
+    url: str,
+    temp_dir: str,
+    file_name: str,
+    queue: asyncio.Queue[int],
+    id: int,
+    from_byte: int,
+    to_byte: int,
+) -> tuple:
+    """
+    Download a specific part of the given file.
+    """
+    headers = {
+        "Range": f"bytes={from_byte}-{to_byte}"
+    }
+    timeout = aiohttp.ClientTimeout(connect=8 * 60)
+    async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
+        async with session.get(url) as response:
+            file_path = os.path.join(temp_dir, f"{file_name}.part{id}")
+            async with aiofiles.open(file_path, 'wb') as file:
+                while True:
+                    chunk = await response.content.read(10 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    await file.write(chunk)
+                    await queue.put(len(chunk))
+    await queue.put(-1)
