@@ -58,4 +58,18 @@ def calc_file_chunks(
         if to_byte > file_size:
             to_byte = file_size
         splitted_parts.append((from_byte, to_byte))
+    verify_splitted_chunks(splitted_parts, file_size)
     return splitted_parts, chunk
+
+
+def verify_splitted_chunks(parts: list, file_size: int) -> bool:
+    """
+    Verify that the sum of calculated chunks is equal to the file size.
+    """
+    calc_size = sum(
+        map(
+            lambda part: part[1] - part[0] + 1,
+            parts
+        )
+    )
+    assert calc_size == file_size, "File size mismatch!"
